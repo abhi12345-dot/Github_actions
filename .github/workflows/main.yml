@@ -1,4 +1,4 @@
-name: ORT scan tiny-express (monorepo subdir)
+name: ORT scan tiny-express (subdir in monorepo)
 
 on:
   workflow_dispatch:
@@ -8,12 +8,12 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout monorepo using PAT
+      - name: Clone source_projects monorepo using PAT
         env:
           TOKEN: ${{ secrets.ACCESS_TOKEN }}
         run: |
           mkdir -p source_projects
-          git clone https://x-access-token:${ACCESS_TOKEN}@github.com/OSS-PRO/source_projects.git source_projects/source_projects
+          git clone https://x-access-token:${TOKEN}@github.com/OSS-PRO/source_projects.git source_projects/source_projects
 
       - name: Create ORT config and output directories
         run: |
@@ -59,4 +59,15 @@ jobs:
           docker run --rm \
             -u root \
             -e ORT_CONFIG_DIR=/ort/config \
-            -v ${{ github.workspace }}
+            -v ${{ github.workspace }}/source_projects/source_projects/tiny-express:/project \
+            -v ${{ github.workspace }}/ort-output:/ort/output \
+            -v ${{ github.workspace }}/ort-config:/ort/config \
+            ghcr.io/oss-review-toolkit/ort:latest \
+            scan -i /ort/output/analyzer-result.yml -o /ort/output
+          echo "Finished ORT scan at $(date)"
+
+      - name: Upload ORT output as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ort-results
+          path: ort-output/
