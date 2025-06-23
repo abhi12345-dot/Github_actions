@@ -6,14 +6,16 @@ jobs:
   scan:
     runs-on: ubuntu-latest
     steps:
-      - name: Clone repository
+      - name: Clone repository with authentication
         run: |
+          # Clone using GitHub Actions' built-in token
           git clone https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/OSS-PRO/source_projects.git
-          cd source_projects && ls -la
-
-      - name: Verify tiny-express exists
-        run: |
-          [ -d "source_projects/tiny-express" ] || { echo "Error: tiny-express not found"; exit 1; }
+          
+          # Verify the repository was cloned
+          ls -la source_projects
+          
+          # Verify tiny-express exists
+          [ -d "source_projects/tiny-express" ] || { echo "Error: tiny-express directory not found"; exit 1; }
 
       - name: Setup ORT environment
         run: |
