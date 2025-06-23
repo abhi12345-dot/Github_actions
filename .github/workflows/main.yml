@@ -8,18 +8,19 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout express repo with full Git history
+      - name: Checkout express repo with full Git history using PAT
+        env:
+          TOKEN: ${{ secrets.ACCESS_TOKEN }}
         run: |
           mkdir -p source_projects
-          git clone https://github.com/tiny-express/tiny-express.git source_projects/tiny-express
+          git clone https://x-access-token:${TOKEN}@github.com/tiny-expressjs/tiny-express.git source_projects/tiny-express
 
-      - name: Create ORT directories
+      - name: Create ORT config and output directories
         run: |
           mkdir -p ort-output ort-config
-          sudo chmod -R 777 ort-output ort-config
-          echo "[]" > ort-config/curations.yml
+          sudo chmod -R 777 ort-output
 
-      - name: Write ORT config
+      - name: Write ORT config with scanner ignorePatterns
         run: |
           cat <<EOF > ort-config/config.yml
           ort:
@@ -30,12 +31,8 @@ jobs:
                 - "**/node_modules/**"
           EOF
 
-      - name: Debug directory structure
-        run: |
-          echo "Current directory structure:"
-          ls -R
-          echo "ORT config file contents:"
-          cat ort-config/config.yml
+      - name: Debug ORT config
+        run: cat ort-config/config.yml
 
       - name: Run ORT analyze
         run: |
@@ -43,17 +40,18 @@ jobs:
           docker run --rm \
             -u root \
             -e ORT_CONFIG_DIR=/ort/config \
-            -v "$(pwd)/source_projects/tiny-express:/project" \
-            -v "$(pwd)/ort-output:/ort/output" \
-            -v "$(pwd)/ort-config:/ort/config" \
+            -v ${{ github.workspace }}/source_projects/tiny-express:/project \
+            -v ${{ github.workspace }}/ort-output:/ort/output \
+            -v ${{ github.workspace }}/ort-config:/ort/config \
             ghcr.io/oss-review-toolkit/ort:latest \
             analyze -i /project -o /ort/output
           echo "Finished ORT analysis at $(date)"
 
-      - name: Clean node_modules
+      - name: Remove node_modules before scan (optional but safe)
         run: |
-          echo "Removing node_modules..."
-          find source_projects/tiny-express -name node_modules -exec rm -rf {} + || true
+          echo "Removing node_modules to speed up scan..."
+          find source_projects/tiny-express -type d -name "node_modules" -prune -exec rm -rf '{}' +
+          echo "Cleanup complete."
 
       - name: Run ORT scan
         run: |
@@ -61,14 +59,14 @@ jobs:
           docker run --rm \
             -u root \
             -e ORT_CONFIG_DIR=/ort/config \
-            -v "$(pwd)/source_projects/tiny-express:/project" \
-            -v "$(pwd)/ort-output:/ort/output" \
-            -v "$(pwd)/ort-config:/ort/config" \
+            -v ${{ github.workspace }}/source_projects/tiny-express:/project \
+            -v ${{ github.workspace }}/ort-output:/ort/output \
+            -v ${{ github.workspace }}/ort-config:/ort/config \
             ghcr.io/oss-review-toolkit/ort:latest \
             scan -i /ort/output/analyzer-result.yml -o /ort/output
           echo "Finished ORT scan at $(date)"
 
-      - name: Upload results
+      - name: Upload ORT output as artifact
         uses: actions/upload-artifact@v4
         with:
           name: ort-results
