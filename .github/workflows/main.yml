@@ -8,12 +8,10 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout tiny-express using Personal Access Token
-        env:
-          TOKEN: ${{ secrets.ACCESS_TOKEN }}
+      - name: Checkout tiny-express using PAT
         run: |
           mkdir -p source_projects
-          git clone https://x-access-token:${TOKEN}@github.com/tiny-expressjs/tiny-express.git source_projects/tiny-express
+          git clone https://x-access-token:${{ secrets.ACCESS_TOKEN }}@github.com/tiny-expressjs/tiny-express.git source_projects/tiny-express
 
       - name: Create ORT config and output directories
         run: |
