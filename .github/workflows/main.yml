@@ -6,7 +6,7 @@ on:
 jobs:
   ort-scan:
     runs-on: ubuntu-latest
-    timeout-minutes: 5  # Very short timeout for quick testing
+    timeout-minutes: 5
 
     steps:
       - name: Checkout repository
@@ -31,7 +31,7 @@ jobs:
           
           npm install --silent
           
-          # Set full permissions for ORT
+          # Critical permission fix
           chmod -R 777 .
 
       - name: Set up ORT environment
@@ -43,12 +43,17 @@ jobs:
           ort:
             analyzer:
               allowDynamicVersions: true
-              temp_dir: /tmp/ort
-              enabled_package_managers: ["NPM"]  # Only enable NPM
+              temp_dir: /tmp/ort-stash  # Explicit temp directory
+              enabled_package_managers: ["NPM"]  # Only what we need
+              skip_excluded: true
             scanner:
               ignorePatterns:
                 - "**/node_modules/**"
           EOF
+
+      - name: Create dummy curations file
+        run: |
+          echo "[]" > ort-config/curations.yml
 
       - name: Run ORT analyze (with fixed permissions)
         run: |
@@ -60,16 +65,23 @@ jobs:
             -e ORT_CONFIG_DIR=/ort/config \
             -e ORT_DATA_DIR=/tmp/ort-data \
             -w /project \
+            -u $(id -u):$(id -g) \  # Run as current user
             ghcr.io/oss-review-toolkit/ort:latest \
             analyze -i /project -o /ort/output \
             --package-curations-file /ort/config/curations.yml
           echo "Finished ORT analysis at $(date)"
 
+      - name: Verify analysis completed
+        run: |
+          if [ ! -f ort-output/analyzer-result.yml ]; then
+            echo "Analysis failed!"
+            exit 1
+          fi
+
       - name: Run ORT scan
         run: |
           echo "Starting ORT scan at $(date)"
           docker run --rm \
-            -v ${{ github.workspace }}/tiny-express:/project \
             -v ${{ github.workspace }}/ort-output:/ort/output \
             -v ${{ github.workspace }}/ort-config:/ort/config \
             ghcr.io/oss-review-toolkit/ort:latest \
