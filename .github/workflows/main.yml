@@ -10,7 +10,8 @@ jobs:
     steps:
       - name: Clone source_projects repository
         run: |
-          git clone https://github.com/OSS-PRO/source_projects.git source_projects
+          git clone https://github.com/OSS-PRO/source_projects.git
+          ls source_projects/tiny-express  # Verify the directory exists
 
       - name: Create ORT directories
         run: |
@@ -38,17 +39,6 @@ jobs:
             -v ${{ github.workspace }}/ort-config:/ort/config \
             ghcr.io/oss-review-toolkit/ort:latest \
             analyze -i /project -o /ort/output
-
-      - name: Run ORT scan
-        run: |
-          docker run --rm \
-            -u root \
-            -e ORT_CONFIG_DIR=/ort/config \
-            -v ${{ github.workspace }}/source_projects/tiny-express:/project \
-            -v ${{ github.workspace }}/ort-output:/ort/output \
-            -v ${{ github.workspace }}/ort-config:/ort/config \
-            ghcr.io/oss-review-toolkit/ort:latest \
-            scan -i /ort/output/analyzer-result.yml -o /ort/output
 
       - name: Upload ORT results
         uses: actions/upload-artifact@v4
