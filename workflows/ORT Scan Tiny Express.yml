@@ -1,19 +1,25 @@
-name: ORT Scan Tiny Express (MIT)
+name: ORT Scan Tiny Express Project
 
 on:
   workflow_dispatch:
 
 jobs:
-  ort-analysis-and-scan:
+  ort-scan:
     runs-on: ubuntu-latest
-    timeout-minutes: 15  # Much shorter timeout since project is tiny
+    timeout-minutes: 10  # Short timeout for quick testing
 
     steps:
-      - name: Create tiny-express project
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up tiny-express project
         run: |
           mkdir -p tiny-express
           cd tiny-express
-          echo '{
+          
+          # Create package.json
+          cat <<EOF > package.json
+          {
             "name": "tiny-express-mit",
             "version": "1.0.0",
             "license": "MIT",
@@ -21,56 +27,77 @@ jobs:
               "express": "4.18.2",
               "morgan": "1.10.0"
             }
-          }' > package.json
-          npm install --silent
-
-      - name: Add MIT license file
-        run: |
-          cat <<EOF > tiny-express/LICENSE
+          }
+          EOF
+          
+          # Create MIT license file
+          cat <<EOF > LICENSE
           MIT License
 
           Copyright (c) $(date +%Y) Test User
 
-          Permission is hereby granted...
+          Permission is hereby granted, free of charge, to any person obtaining a copy
+          of this software and associated documentation files (the "Software"), to deal
+          in the Software without restriction, including without limitation the rights
+          to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+          copies of the Software, and to permit persons to whom the Software is
+          furnished to do so, subject to the following conditions:
+
+          The above copyright notice and this permission notice shall be included in all
+          copies or substantial portions of the Software.
+
+          THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+          IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+          FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+          AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+          LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+          OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+          SOFTWARE.
           EOF
+          
+          npm install --silent
 
-      - name: Create ORT directories
+      - name: Set up ORT environment
         run: |
-          mkdir -p ort-output ort-config
+          mkdir -p ort-config ort-output
           sudo chmod -R 777 ort-output
-
-      - name: Configure ORT
-        run: |
+          
+          # Create ORT config file
           cat <<EOF > ort-config/config.yml
           ort:
             analyzer:
               allowDynamicVersions: true
+              temp_dir: /tmp/ort  # Custom writable directory
             scanner:
               ignorePatterns:
                 - "**/node_modules/**"
           EOF
 
+      - name: Fix permissions
+        run: |
+          sudo chmod -R a+rwX ${{ github.workspace }}/tiny-express
+
       - name: Run ORT analyze
         run: |
-          echo "Starting analysis at $(date)"
+          echo "Starting ORT analysis at $(date)"
           docker run --rm \
             -v ${{ github.workspace }}/tiny-express:/project \
-            -v ${{ github.workspace }}/ort-output:/out \
+            -v ${{ github.workspace }}/ort-output:/ort/output \
             -v ${{ github.workspace }}/ort-config:/ort/config \
             ghcr.io/oss-review-toolkit/ort:latest \
-            analyze -i /project -o /out
-          echo "Analysis finished at $(date)"
+            analyze -i /project -o /ort/output
+          echo "Finished ORT analysis at $(date)"
 
       - name: Run ORT scan
         run: |
-          echo "Starting scan at $(date)"
+          echo "Starting ORT scan at $(date)"
           docker run --rm \
             -v ${{ github.workspace }}/tiny-express:/project \
-            -v ${{ github.workspace }}/ort-output:/out \
+            -v ${{ github.workspace }}/ort-output:/ort/output \
             -v ${{ github.workspace }}/ort-config:/ort/config \
             ghcr.io/oss-review-toolkit/ort:latest \
-            scan -i /out/analyzer-result.yml -o /out
-          echo "Scan finished at $(date)"
+            scan -i /ort/output/analyzer-result.yml -o /ort/output
+          echo "Finished ORT scan at $(date)"
 
       - name: Upload results
         uses: actions/upload-artifact@v4
