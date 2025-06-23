@@ -8,21 +8,21 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Clone source_projects repository
+      - name: Clone repository
         run: |
-          git clone https://github.com/OSS-PRO/source_projects.git
+          git clone https://${{ github.actor }}:${{ secrets.GITHUB_TOKEN }}@github.com/OSS-PRO/source_projects.git
+          ls source_projects  # Verify contents
 
       - name: Verify tiny-express exists
         run: |
-          ls -la source_projects/tiny-express
-          [ -d "source_projects/tiny-express" ] || exit 1
+          [ -d "source_projects/tiny-express" ] || { echo "tiny-express directory not found"; exit 1; }
 
-      - name: Create ORT directories
+      - name: Setup ORT environment
         run: |
-          mkdir -p ort-output ort-config
+          mkdir -p ort-{output,config}
           sudo chmod -R 777 ort-output
 
-      - name: Write ORT config
+      - name: Configure ORT
         run: |
           cat <<EOF > ort-config/config.yml
           ort:
@@ -33,11 +33,9 @@ jobs:
                 - "**/node_modules/**"
           EOF
 
-      - name: Run ORT analyze
+      - name: Run ORT analysis
         run: |
           docker run --rm \
-            -u root \
-            -e ORT_CONFIG_DIR=/ort/config \
             -v ${{ github.workspace }}/source_projects/tiny-express:/project \
             -v ${{ github.workspace }}/ort-output:/ort/output \
             -v ${{ github.workspace }}/ort-config:/ort/config \
@@ -47,16 +45,13 @@ jobs:
       - name: Run ORT scan
         run: |
           docker run --rm \
-            -u root \
-            -e ORT_CONFIG_DIR=/ort/config \
-            -v ${{ github.workspace }}/source_projects/tiny-express:/project \
             -v ${{ github.workspace }}/ort-output:/ort/output \
             -v ${{ github.workspace }}/ort-config:/ort/config \
             ghcr.io/oss-review-toolkit/ort:latest \
             scan -i /ort/output/analyzer-result.yml -o /ort/output
 
-      - name: Upload ORT results
+      - name: Upload results
         uses: actions/upload-artifact@v4
         with:
           name: ort-results
-          path: ort-output/
+          path: ort-output
