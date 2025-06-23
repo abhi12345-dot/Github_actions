@@ -11,7 +11,7 @@ jobs:
       - name: Checkout express repo with full Git history
         run: |
           mkdir -p source_projects
-          git clone https://github.com/expressjs/express.git source_projects/express
+          git clone https://github.com/tiny-express/tiny-express.git source_projects/tiny-express
 
       - name: Create ORT directories
         run: |
@@ -43,7 +43,7 @@ jobs:
           docker run --rm \
             -u root \
             -e ORT_CONFIG_DIR=/ort/config \
-            -v "$(pwd)/source_projects/express:/project" \
+            -v "$(pwd)/source_projects/tiny-express:/project" \
             -v "$(pwd)/ort-output:/ort/output" \
             -v "$(pwd)/ort-config:/ort/config" \
             ghcr.io/oss-review-toolkit/ort:latest \
@@ -53,7 +53,7 @@ jobs:
       - name: Clean node_modules
         run: |
           echo "Removing node_modules..."
-          find source_projects/express -name node_modules -exec rm -rf {} + || true
+          find source_projects/tiny-express -name node_modules -exec rm -rf {} + || true
 
       - name: Run ORT scan
         run: |
@@ -61,7 +61,7 @@ jobs:
           docker run --rm \
             -u root \
             -e ORT_CONFIG_DIR=/ort/config \
-            -v "$(pwd)/source_projects/express:/project" \
+            -v "$(pwd)/source_projects/tiny-express:/project" \
             -v "$(pwd)/ort-output:/ort/output" \
             -v "$(pwd)/ort-config:/ort/config" \
             ghcr.io/oss-review-toolkit/ort:latest \
