@@ -30,8 +30,6 @@ jobs:
           EOF
           
           npm install --silent
-          
-          # Critical permission fix
           chmod -R 777 .
 
       - name: Set up ORT environment
@@ -43,19 +41,16 @@ jobs:
           ort:
             analyzer:
               allowDynamicVersions: true
-              temp_dir: /tmp/ort-stash  # Explicit temp directory
-              enabled_package_managers: ["NPM"]  # Only what we need
+              temp_dir: /tmp/ort-stash
+              enabled_package_managers: ["NPM"]
               skip_excluded: true
             scanner:
               ignorePatterns:
                 - "**/node_modules/**"
           EOF
-
-      - name: Create dummy curations file
-        run: |
           echo "[]" > ort-config/curations.yml
 
-      - name: Run ORT analyze (with fixed permissions)
+      - name: Run ORT analyze
         run: |
           echo "Starting ORT analysis at $(date)"
           docker run --rm \
@@ -65,7 +60,7 @@ jobs:
             -e ORT_CONFIG_DIR=/ort/config \
             -e ORT_DATA_DIR=/tmp/ort-data \
             -w /project \
-            -u $(id -u):$(id -g) \  # Run as current user
+            -u $(id -u):$(id -g) \
             ghcr.io/oss-review-toolkit/ort:latest \
             analyze -i /project -o /ort/output \
             --package-curations-file /ort/config/curations.yml
