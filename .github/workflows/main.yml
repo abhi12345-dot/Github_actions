@@ -1,27 +1,40 @@
-name: ORT Scan Workflow
+name: ORT Scan for tiny-express
 
-on: [workflow_dispatch]
+on:
+  workflow_dispatch:
 
 jobs:
-  scan:
+  ort-scan:
     runs-on: ubuntu-latest
-    steps:
-      - name: Clone repository with authentication
-        run: |
-          # Clone using GitHub Actions' built-in token
-          git clone https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/OSS-PRO/source_projects.git
-          
-          # Verify the repository was cloned
-          ls -la source_projects
-          
-          # Verify tiny-express exists
-          [ -d "source_projects/tiny-express" ] || { echo "Error: tiny-express directory not found"; exit 1; }
+    permissions:
+      contents: read  # Required for cloning
 
-      - name: Setup ORT environment
+    steps:
+      # 1. PROPERLY CLONE THE REPOSITORY
+      - name: Clone source_projects
+        uses: actions/checkout@v4
+        with:
+          repository: OSS-PRO/source_projects
+          path: source_projects
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      # 2. VERIFY THE REPO STRUCTURE
+      - name: Check tiny-express exists
+        run: |
+          if [ ! -d "source_projects/tiny-express" ]; then
+            echo "::error::tiny-express directory not found!"
+            ls -R source_projects  # Debug listing
+            exit 1
+          fi
+
+      # 3. SETUP ORT ENVIRONMENT
+      - name: Prepare ORT
         run: |
           mkdir -p ort-{output,config}
-          sudo chmod -R 777 ort-output
+          echo "ORT directories created:"
+          ls -l ort-*
 
+      # 4. ORT CONFIGURATION
       - name: Configure ORT
         run: |
           cat <<EOF > ort-config/config.yml
@@ -31,19 +44,34 @@ jobs:
             scanner:
               ignorePatterns:
                 - "**/node_modules/**"
+                - "**/test/**"
+                - "**/.git/**"
           EOF
 
-      - name: Run ORT analysis
+      # 5. RUN ANALYSIS
+      - name: ORT Analyze
         run: |
           docker run --rm \
-            -v ${{ github.workspace }}/source_projects/tiny-express:/project \
-            -v ${{ github.workspace }}/ort-output:/ort/output \
-            -v ${{ github.workspace }}/ort-config:/ort/config \
+            -v "$PWD/source_projects/tiny-express:/project" \
+            -v "$PWD/ort-output:/ort/output" \
+            -v "$PWD/ort-config:/ort/config" \
             ghcr.io/oss-review-toolkit/ort:latest \
             analyze -i /project -o /ort/output
 
-      - name: Upload results
+      # 6. RUN SCAN
+      - name: ORT Scan
+        run: |
+          docker run --rm \
+            -v "$PWD/ort-output:/ort/output" \
+            -v "$PWD/ort-config:/ort/config" \
+            ghcr.io/oss-review-toolkit/ort:latest \
+            scan -i /ort/output/analyzer-result.yml -o /ort/output
+
+      # 7. UPLOAD RESULTS
+      - name: Upload ORT Report
         uses: actions/upload-artifact@v4
         with:
-          name: ort-results
-          path: ort-output
+          name: ort-scan-results
+          path: |
+            ort-output/analyzer-result.yml
+            ort-output/scan-result.yml
