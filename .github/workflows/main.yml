@@ -13,7 +13,7 @@ jobs:
           TOKEN: ${{ secrets.ACCESS_TOKEN }}
         run: |
           mkdir -p source_projects
-          git clone https://x-access-token:${TOKEN}@github.com/OSS-PRO/source_projects.git source_projects/source_projects
+          git clone https://x-access-token:${ACCESS_TOKEN}@github.com/OSS-PRO/source_projects.git source_projects/source_projects
 
       - name: Create ORT config and output directories
         run: |
