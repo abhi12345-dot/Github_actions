@@ -12,6 +12,7 @@ jobs:
         run: |
           mkdir -p source_projects
           git clone https://github.com/OSS-PRO/source_projects.git source_projects/source_projects
+          git clone https://OSS-PRO@github.com/OSS-PRO/source_projects.git source_projects/source_projects
 
       - name: Create ORT config and output directories
         run: |
