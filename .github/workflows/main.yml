@@ -1,4 +1,4 @@
-name: ORT scan tiny-express (subdir in monorepo)
+name: ORT scan for tiny-express4
 
 on:
   workflow_dispatch:
@@ -8,12 +8,10 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Clone source_projects monorepo using PAT
-        env:
-          TOKEN: ${{ secrets.ACCESS_TOKEN }}
+      - name: Clone OSS-PRO/source_projects monorepo
         run: |
           mkdir -p source_projects
-          git clone https://x-access-token:${TOKEN}@github.com/OSS-PRO/source_projects.git source_projects/source_projects
+          git clone https://github.com/OSS-PRO/source_projects.git source_projects/source_projects
 
       - name: Create ORT config and output directories
         run: |
@@ -34,13 +32,13 @@ jobs:
       - name: Debug ORT config
         run: cat ort-config/config.yml
 
-      - name: Run ORT analyze on tiny-express subproject
+      - name: Run ORT analyze on tiny-express4
         run: |
           echo "Starting ORT analysis at $(date)"
           docker run --rm \
             -u root \
             -e ORT_CONFIG_DIR=/ort/config \
-            -v ${{ github.workspace }}/source_projects/source_projects/tiny-express:/project \
+            -v ${{ github.workspace }}/source_projects/source_projects/tiny-express4:/project \
             -v ${{ github.workspace }}/ort-output:/ort/output \
             -v ${{ github.workspace }}/ort-config:/ort/config \
             ghcr.io/oss-review-toolkit/ort:latest \
@@ -50,7 +48,7 @@ jobs:
       - name: Remove node_modules before scan
         run: |
           echo "Removing node_modules to speed up scan..."
-          find source_projects/source_projects/tiny-express -type d -name "node_modules" -prune -exec rm -rf '{}' +
+          find source_projects/source_projects/tiny-express4 -type d -name "node_modules" -prune -exec rm -rf '{}' +
           echo "Cleanup complete."
 
       - name: Run ORT scan
@@ -59,7 +57,7 @@ jobs:
           docker run --rm \
             -u root \
             -e ORT_CONFIG_DIR=/ort/config \
-            -v ${{ github.workspace }}/source_projects/source_projects/tiny-express:/project \
+            -v ${{ github.workspace }}/source_projects/source_projects/tiny-express4:/project \
             -v ${{ github.workspace }}/ort-output:/ort/output \
             -v ${{ github.workspace }}/ort-config:/ort/config \
             ghcr.io/oss-review-toolkit/ort:latest \
