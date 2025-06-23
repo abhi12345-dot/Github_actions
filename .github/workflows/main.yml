@@ -1,19 +1,19 @@
-name: ORT scan for tiny-express
+name: ORT Scan Workflow
 
-on:
-  workflow_dispatch:
+on: [workflow_dispatch]
 
 jobs:
-  ort-analysis-and-scan:
+  scan:
     runs-on: ubuntu-latest
-    
     steps:
-      - name: Clone repository using PAT
+      - name: Clone repository
         run: |
-          git clone https://oauth2:${{ secrets.PAT_TOKEN }}@github.com/OSS-PRO/source_projects.git
-          ls source_projects/tiny-express || echo "Directory structure verification failed"
-        env:
-          PAT_TOKEN: ${{ secrets.PAT_TOKEN }}
+          git clone https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/OSS-PRO/source_projects.git
+          cd source_projects && ls -la
+
+      - name: Verify tiny-express exists
+        run: |
+          [ -d "source_projects/tiny-express" ] || { echo "Error: tiny-express not found"; exit 1; }
 
       - name: Setup ORT environment
         run: |
